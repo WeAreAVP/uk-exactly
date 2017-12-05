@@ -240,40 +240,12 @@ public class CommonUtil {
 			int startIndex = 0;
 			int endIndex = 78;
 			if (text.length() > 79) {
-				String newString;
-				int i = 1;
-				while (i != 0) {
-					int first = text.indexOf(" ", endIndex);
-					int last = text.lastIndexOf(" ", endIndex);
-					if (first < 0) {
-						newString = text.substring(startIndex, endIndex);
-						startIndex = text.length() + 1;
-					} else if (first == endIndex + 1 || first == endIndex) {
-						newString = text.substring(startIndex, endIndex);
-						if (first == endIndex) {
-							startIndex = first + 1;
-
-						} else {
-							startIndex = first;
-						}
-						endIndex = first + 78;
-					} else {
-						endIndex = last;
-						newString = text.substring(startIndex, endIndex);
-						startIndex = last + 1;
-						endIndex = endIndex + 78;
-					}
-
-					stringBuilder.append(newString);
-					stringBuilder.append(System.getProperty("line.separator"));
-					stringBuilder.append("\t");
-					if (startIndex > text.length()) {
-						i = 0;
-					}
-					if (endIndex > text.length()) {
-						endIndex = text.length();
-					}
-				}
+				//put a newline and tab every 79 characters as outlined in bag-it spec section 2.2.2
+				String seperatedString = text.replaceAll(
+						"(.{79})",
+						"$1" + System.getProperty("line.separator") + "\t"
+				);
+				stringBuilder.append(seperatedString);
 				stringBuilder.append(System.getProperty("line.separator"));
 			} else {
 				stringBuilder.append(b.getLabel().concat(": ").concat(b.getValue()));
