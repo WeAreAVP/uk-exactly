@@ -1,10 +1,8 @@
-===
 Exactly License & Copyright
 ===
 
 Exactly code is licensed under the Apache 2.0 license (http://www.apache.org/licenses/). All Exactly code and documentation copyright (c) University of Kentucky (http://www.uky.edu). All Rights Reserved.
 
-===
 Exactly Integral Components and Licensing Information
 ===
 **Name:** Commons Logging API
