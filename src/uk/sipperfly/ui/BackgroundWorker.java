@@ -735,12 +735,13 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 		this.generateSystemDataFile();
 		this.generateCsvFile(this.payLoad, this.bagDate, bagitSize);
 		this.createXML(this.payLoad, this.bagDate, bagitSize);
+                BagVerifier verifier = new BagVerifier();
 		try {
-                    BagVerifier verifier = new BagVerifier();
+                    
                     BagReader reader = new BagReader();
                     bag = reader.read(folder);
                     verifier.isValid(bag, false);
-
+                    
                     numberOfFiles = bag.getPayLoadManifests().size(); // get the number of payload files
                     numberOfFiles += 4; // add the standard bagit files
 
@@ -759,7 +760,9 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 			Logger.getLogger(GACOM).log(Level.SEVERE, "Error closing the bag", ex);
 			File newManifest = new File(this.target.toString() + File.separator + "manifest-md5.txt");
 			Files.write(newManifest.toPath(), this.content.getBytes(StandardCharsets.UTF_8));
-		}
+		}finally{
+                    verifier.close();
+                }
 		if (this.parent.totalFiles > this.parent.tranferredFiles) {
 			this.parent.UpdateProgressBar(this.parent.totalFiles);
 		}
@@ -1067,6 +1070,7 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
             Bag bag;
             String unzippedPath = null;
             boolean requiresCleanUp = false;
+            BagVerifier verifier = new BagVerifier();
             try {
                 if(path.toLowerCase().endsWith(".zip")) {
                         unzippedPath = path.replace(".zip", "");
@@ -1075,7 +1079,6 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
                         requiresCleanUp = true;
                 }
                 bag = reader.read(rootDir);
-                BagVerifier verifier = new BagVerifier();
                 verifier.isValid(bag, false);
             } catch (IOException | UnparsableVersionException | UnsupportedAlgorithmException
                             | MaliciousPathException | InvalidBagitFileFormatException | VerificationException
@@ -1089,6 +1092,7 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
                 if(requiresCleanUp){
                     retryDelete(unzippedPath);
                 }
+                verifier.close();
             }
             return 1;
 	}
