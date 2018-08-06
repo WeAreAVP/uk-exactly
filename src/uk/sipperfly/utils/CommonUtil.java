@@ -1,11 +1,11 @@
 /* 
  * Exactly
- * Author: Nouman Tayyab (nouman@avpreserve.com)
- * Author: Rimsha Khalid (rimsha@avpreserve.com)
- * Version: 0.1.5
+ * Author: Nouman Tayyab (nouman@weareavp.com)
+ * Author: Rimsha Khalid (rimsha@weareavp.com)
+ * Version: 0.1.6
  * Requires: JDK 1.7 or higher
  * Description: This tool transfers digital files to the UK Exactly
- * Support: info@avpreserve.com
+ * Support: info@weareavp.com
  * License: Apache 2.0
  * Copyright: University of Kentucky (http://www.uky.edu). All Rights Reserved
  *
@@ -101,18 +101,26 @@ public class CommonUtil {
 	 */
 	public static int countFilesInDirectory(File directory, String filters) {
 		int count = 0;
-		for (File file : directory.listFiles()) {
-			if (file.isFile()) {
-				String fileName = file.getName();
-				boolean ignore = checkIgnoreFiles(fileName, filters);
-				if (!ignore) {
-					count++;
-				}
-			}
-			if (file.isDirectory()) {
-				count += countFilesInDirectory(file, filters);
-			}
-		}
+                if( null != directory.listFiles() )
+                {
+                    for (File file : directory.listFiles()) {
+                        try{
+                            if (file.isFile()) {
+                                    String fileName = file.getName();
+                                    boolean ignore = checkIgnoreFiles(fileName, filters);
+                                    if (!ignore) {
+                                            count++;
+                                    }
+                            }
+                            if (file.isDirectory()) {
+                                    count += countFilesInDirectory(file, filters);
+                            }
+                        }catch(Exception e)
+                        {
+                            System.err.println(e.getMessage());
+                        }
+                    }
+                }
 		return count;
 	}
 

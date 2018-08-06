@@ -1,11 +1,11 @@
 /* 
  * Exactly
- * Author: Nouman Tayyab (nouman@avpreserve.com)
- * Author: Rimsha Khalid (rimsha@avpreserve.com)
+ * Author: Nouman Tayyab (nouman@weareavp.com)
+ * Author: Rimsha Khalid (rimsha@weareavp.com)
  * Version: 0.1.5
  * Requires: JDK 1.7 or higher
  * Description: This tool transfers digital files to the UK Exactly
- * Support: info@avpreserve.com
+ * Support: info@weareavp.com
  * License: Apache 2.0
  * Copyright: University of Kentucky (http://www.uky.edu). All Rights Reserved
  *
@@ -558,9 +558,25 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
             // get the drop location path from database.
             Path targetDirPath = new File(this.config.getDropLocation()).toPath();
             
-            // create it if it doesn't exist
+            
             if (!Files.exists(targetDirPath)) {
-                Files.createDirectory(targetDirPath);
+                try{
+                    Files.createDirectory(targetDirPath);
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                    try(  PrintWriter out = new PrintWriter( "file_permission_sp_exception.txt" )  ){
+                        out.println( ex.getCause() + "\n" + ex.getMessage() );
+                    }
+                    System.out.println("Ex: " + ex.getMessage() );
+                    try{
+                        File f = new File(targetDirPath.toString());
+                        f.mkdirs();
+                    }catch(Exception e){
+                        FileUtils.forceMkdir(new File(targetDirPath.toString()));
+                        e.printStackTrace();
+                    }
+                }
+                
             }
 
             // use the bag name that User selected instead of Source directory/file name.
