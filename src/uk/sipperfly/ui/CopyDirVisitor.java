@@ -12,7 +12,12 @@
  */
 package uk.sipperfly.ui;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +30,7 @@ import uk.sipperfly.persistent.Configurations;
 import uk.sipperfly.repository.ConfigurationsRepo;
 import static uk.sipperfly.ui.Exactly.GACOM;
 import uk.sipperfly.utils.CommonUtil;
+import static uk.sipperfly.utils.CommonUtil.copyFileAttributes;
 
 /**
  * This class implements the visitor used by the FileTransfer class.
@@ -87,7 +93,7 @@ class CopyDirVisitor extends SimpleFileVisitor<Path> {
             return super.postVisitDirectory(dir, exc);
         }
 
-	/**
+		/**
 	 * Performs the actual file copy from the source to the target. Updates the parent GUI progress bar as well.
 	 *
 	 * @param file The path of the file to copy
@@ -106,21 +112,38 @@ class CopyDirVisitor extends SimpleFileVisitor<Path> {
 			Logger.getLogger(GACOM).log(Level.SEVERE, "TERMINATING file visitor");
 			return FileVisitResult.TERMINATE;
 		}
+
 		ConfigurationsRepo configRepo = new ConfigurationsRepo();
 		Configurations config = configRepo.getOneOrCreateOne();
-		config.getFilters();
-		CommonUtil commonUtil = new CommonUtil();
 
-		System.out.println(file.getFileName().toString());
-		boolean ignore = commonUtil.checkIgnoreFiles(file.getFileName().toString(), config.getFilters());
+		boolean ignore = CommonUtil.checkIgnoreFiles(file.getFileName().toString(), config.getFilters());
 		if (!ignore) {
-			Files.copy(file, toPath.resolve(fromPath.relativize(file)), REPLACE_EXISTING);
+			File destinationFile = new File(toPath.resolve(fromPath.relativize(file)).toString());
+			try {
+				copyFileUsingFileChannels(file.toFile(), destinationFile);
+				copyFileAttributes(file, destinationFile.toPath());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			this.parent.tranferredFiles = this.parent.tranferredFiles + 1;
 			this.parent.UpdateProgressBar(this.parent.tranferredFiles);
-			
 		}
 		Logger.getLogger(GACOM).log(Level.INFO, "Count of Files: ".concat(Integer.toString(this.parent.tranferredFiles)));
 
 		return FileVisitResult.CONTINUE;
+	}
+
+	private static void copyFileUsingFileChannels(File source, File destinationFile)
+			throws IOException {
+            FileChannel outputChannel = new RandomAccessFile(destinationFile, "rw").getChannel();
+            FileLock lock = outputChannel.lock();
+            try (FileChannel inputChannel = new FileInputStream(source).getChannel()) {
+                outputChannel.transferFrom(inputChannel, 0, inputChannel.size());
+            } finally {
+                if (lock != null) {
+                    lock.release();
+                }
+                outputChannel.close();
+            }
 	}
 }
