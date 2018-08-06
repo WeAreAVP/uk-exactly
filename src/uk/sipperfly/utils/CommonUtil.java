@@ -24,6 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.DosFileAttributes;
+import java.nio.file.attribute.PosixFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
@@ -233,56 +237,15 @@ public class CommonUtil {
 	 * @param bagInfo
 	 * @return text for bag-info.txt file.
 	 */
-	public String createBagInfoTxt(List<BagInfo> bagInfo) {
-		StringBuilder stringBuilder = new StringBuilder();
-		for (BagInfo b : bagInfo) {
-			String text = b.getLabel().concat(": ").concat(b.getValue()).replaceAll("\\s+", " ").trim();
-			int startIndex = 0;
-			int endIndex = 78;
-			if (text.length() > 79) {
-				String newString;
-				int i = 1;
-				while (i != 0) {
-					int first = text.indexOf(" ", endIndex);
-					int last = text.lastIndexOf(" ", endIndex);
-					if (first < 0) {
-						newString = text.substring(startIndex, endIndex);
-						startIndex = text.length() + 1;
-					} else if (first == endIndex + 1 || first == endIndex) {
-						newString = text.substring(startIndex, endIndex);
-						if (first == endIndex) {
-							startIndex = first + 1;
-
-						} else {
-							startIndex = first;
-						}
-						endIndex = first + 78;
-					} else {
-						endIndex = last;
-						newString = text.substring(startIndex, endIndex);
-						startIndex = last + 1;
-						endIndex = endIndex + 78;
-					}
-
-					stringBuilder.append(newString);
-					stringBuilder.append(System.getProperty("line.separator"));
-					stringBuilder.append("\t");
-					if (startIndex > text.length()) {
-						i = 0;
-					}
-					if (endIndex > text.length()) {
-						endIndex = text.length();
-					}
-				}
-				stringBuilder.append(System.getProperty("line.separator"));
-			} else {
-				stringBuilder.append(b.getLabel().concat(": ").concat(b.getValue()));
-				stringBuilder.append(System.getProperty("line.separator"));
-			}
-		}
-		String finalString = stringBuilder.toString();
-		return finalString;
-	}
+        public String createBagInfoTxt(BagInfo bagInfo) {
+            String text = bagInfo.getValue();
+            if (text.length() > 79) {
+                //put a newline and tab every 79 characters as outlined in bag-it spec section 2.2.2
+                text = text.replaceAll("\\s+", " ").trim()
+                        .replaceAll("(.{79})","$1" + System.getProperty("line.separator") + "\t");
+            }
+            return text;
+        }
 
 	/**
 	 * Search and replace text in file.
@@ -803,4 +766,53 @@ public class CommonUtil {
 		}
 		return out;
 	}
+        
+        public static void copyFileAttributes(Path source, Path destination){
+            //Copy Basic File Attributes
+            try {
+                BasicFileAttributes attr = Files.readAttributes(source, BasicFileAttributes.class);
+                Files.setAttribute(destination, "basic:creationTime", attr.creationTime());
+                Files.setAttribute(destination, "basic:lastAccessTime", attr.lastAccessTime());
+                Files.setAttribute(destination, "basic:lastModifiedTime", attr.lastModifiedTime());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //Copy DOS File Attributes
+            try {
+                DosFileAttributes attr =
+                        Files.readAttributes(source, DosFileAttributes.class);
+                Files.setAttribute(destination, "dos:readonly", attr.isReadOnly());
+                Files.setAttribute(destination, "dos:hidden", attr.isHidden());
+                Files.setAttribute(destination, "dos:archive", attr.isArchive());
+                Files.setAttribute(destination, "dos:system", attr.isSystem());
+            } catch (UnsupportedOperationException | IOException e) {
+                System.err.println("DOS file" +
+                        " attributes not supported:" + e);
+            }
+            //Copy POSIX File Attributes
+            try {
+                PosixFileAttributes attrs =
+                        Files.readAttributes(source, PosixFileAttributes.class);
+                System.out.println(attrs.group());
+                System.out.println(attrs.permissions());
+                System.out.println(attrs.owner());
+                Files.setAttribute(destination, "posix:permissions", attrs.permissions());
+                Files.setAttribute(destination, "posix:group", attrs.group());
+            }
+            catch (Exception e) {
+                System.err.println("POSIX file" +
+                        " attributes not supported:" + e);
+            }
+            //Copy ACL File Attributes
+            try {
+                AclFileAttributeView aclFileAttributes = Files.getFileAttributeView(
+                        source, AclFileAttributeView.class);
+                Files.setAttribute(destination, "acl:acl", aclFileAttributes.getAcl());
+                Files.setAttribute(destination, "acl:owner", aclFileAttributes.getOwner());
+            }
+            catch (Exception e){
+                System.err.println("ACL file" +
+                        " attributes not supported:" + e);
+            }
+    }
 }

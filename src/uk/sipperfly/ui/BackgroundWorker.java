@@ -25,16 +25,16 @@ import javax.swing.SwingWorker;
 import static uk.sipperfly.ui.Exactly.GACOM;
 
 // Bagit imports
-import gov.loc.repository.bagit.Bag;
-import gov.loc.repository.bagit.BagFactory;
-import gov.loc.repository.bagit.BagInfoTxt;
-import gov.loc.repository.bagit.Manifest;
+import gov.loc.repository.bagit.creator.BagCreator;
+import gov.loc.repository.bagit.domain.Bag;
+import gov.loc.repository.bagit.domain.Metadata;
+import gov.loc.repository.bagit.exceptions.*;
+import gov.loc.repository.bagit.hash.StandardSupportedAlgorithms;
+import gov.loc.repository.bagit.hash.SupportedAlgorithm;
+import gov.loc.repository.bagit.reader.BagReader;
+import gov.loc.repository.bagit.verify.BagVerifier;
 
-import gov.loc.repository.bagit.PreBag;
-import gov.loc.repository.bagit.utilities.SimpleResult;
-import gov.loc.repository.bagit.verify.impl.CompleteVerifierImpl;
-import gov.loc.repository.bagit.verify.impl.ParallelManifestChecksumVerifier;
-import gov.loc.repository.bagit.verify.impl.ValidVerifierImpl;
+import org.zeroturnaround.zip.ZipUtil;
 
 import java.awt.Color;
 import java.io.BufferedWriter;
@@ -42,6 +42,8 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
@@ -51,8 +53,10 @@ import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import javax.swing.BorderFactory;
 import javax.swing.border.Border;
 
@@ -86,6 +90,7 @@ import org.w3c.dom.Element;
 import uk.sipperfly.persistent.BagInfo;
 import uk.sipperfly.persistent.SFTP;
 import uk.sipperfly.repository.SFTPRepo;
+import static uk.sipperfly.utils.CommonUtil.copyFileAttributes;
 import uk.sipperfly.utils.SFTPUtil;
 
 /**
@@ -334,10 +339,7 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 				// Set the tragetPath of bag.
 				this.setTragetPath();
 				//transfer
-				this.parent.UpdateResult("Transfering files...", 0);
 				Logger.getLogger(GACOM).log(Level.INFO, "Transfering files...");
-				// rimsha here
-
 				Path target = TransferFiles();
 				if (!getTargetChecksum(this.target.toFile()).equals("success")) {
 					this.parent.UpdateResult("Something went wrong while copying files again trying to transfer files...", 0);
@@ -553,23 +555,24 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 	 * @throws Exception
 	 */
 	protected Path setTragetPath() throws Exception {
-		// get the drop location path from database.
-		Path targetDirPath = new File(this.config.getDropLocation()).toPath();
-		// create it if it doesn't exist
-		if (!Files.exists(targetDirPath)) {
-			Files.createDirectory(targetDirPath);
-		}
+            // get the drop location path from database.
+            Path targetDirPath = new File(this.config.getDropLocation()).toPath();
+            
+            // create it if it doesn't exist
+            if (!Files.exists(targetDirPath)) {
+                Files.createDirectory(targetDirPath);
+            }
 
-		// use the bag name that User selected instead of Source directory/file name.
-		String name = this.parent.bagNameField.getText();
-		File bagName = new File(name);
-		this.target = this.commonUtil.combine(targetDirPath, bagName.toPath());
+            // use the bag name that User selected instead of Source directory/file name.
+            String name = this.parent.bagNameField.getText();
+            File bagName = new File(name);
+            this.target = CommonUtil.combine(targetDirPath, bagName.toPath());
 
-		// create it if it doesn't exist
-		if (!Files.exists(this.target)) {
-			Files.createDirectory(this.target);
-		}
-		return target;
+            // create it if it doesn't exist
+            if (!Files.exists(this.target)) {
+                Files.createDirectory(this.target);
+            }
+            return target;
 	}
 
 	/**
@@ -578,15 +581,14 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 	 * @return true if existed else false
 	 */
 	public boolean validateBagName() {
-		Path targetDirPath = new File(this.config.getDropLocation()).toPath();
-		String name = this.parent.bagNameField.getText();
-		File bagName = new File(name);
-		this.target = this.commonUtil.combine(targetDirPath, bagName.toPath());
-		if (Files.exists(this.target)) {
-			return true;
-		}
-		return false;
-
+            Path targetDirPath = new File(this.config.getDropLocation()).toPath();
+            String name = this.parent.bagNameField.getText();
+            File bagName = new File(name);
+            this.target = CommonUtil.combine(targetDirPath, bagName.toPath());
+            if (Files.exists(this.target)) {
+                    return true;
+            }
+            return false;
 	}
 
 	/**
@@ -648,33 +650,32 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 	 *
 	 * @see* http://www.digitalpreservation.gov/documents/bagitspec.pdf
 	 */
-	public void BagFolder() throws NoSuchAlgorithmException, FileNotFoundException, IOException {
-//		String content;
-		Charset charset;
-		// bag the folder
-		BagFactory bagFactory = new BagFactory();
-
-		// make the bag
-		PreBag preBag = bagFactory.createPreBag(this.target.toFile());
-
-		// keep empty folders?
-		Bag bag = preBag.makeBagInPlace(BagFactory.LATEST, false);
-		BagInfoTxt bagInfoTxt = bag.getBagInfoTxt();
+	public void BagFolder() throws NoSuchAlgorithmException, IOException {
+                Path folder = Paths.get(this.target.toFile().getAbsolutePath());
+		long size = FileUtils.sizeOfDirectory(folder.toFile());
+		Double truncatedDouble = BigDecimal.valueOf(((double) size / (double) 1024))
+				.setScale(2, RoundingMode.CEILING)
+				.doubleValue();
+		this.bagitSize = truncatedDouble + " KB";
+		Metadata extraMetadata = new Metadata();
 		BagInfoRepo bagInfoRepo = new BagInfoRepo();
-//		String bagInfoText = "";
-		String bagInfoText = this.commonUtil.createBagInfoTxt(bagInfoRepo.getOneOrCreateOne());
-		String originalChecksum = this.commonUtil.checkSum(this.target.toString().concat("/bag-info.txt"));
-		try {
-			FileWriter fileWritter = new FileWriter(this.target.toString().concat("/bag-info.txt"), true);
-			BufferedWriter bufferWritter = new BufferedWriter(fileWritter);
-			bufferWritter.write(bagInfoText);
-			bufferWritter.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			Logger.getLogger(GACOM).log(Level.INFO, "Issue while writing file.", e);
+		List<BagInfo> bagInfoList = bagInfoRepo.getOneOrCreateOne();
+		for (BagInfo bagInfo : bagInfoList) {
+			extraMetadata.add(bagInfo.getLabel(), this.commonUtil.createBagInfoTxt(bagInfo));
 		}
-		this.bagCount = bag.getPayload().size();
-		String payloadOxum = bagInfoTxt.getPayloadOxum();
+		extraMetadata.add("Bag-Size", this.bagitSize);
+
+		Bag bag = BagCreator.bagInPlace(
+			folder,
+			Collections.singletonList((SupportedAlgorithm) StandardSupportedAlgorithms.MD5),
+			true,
+			extraMetadata
+		);
+
+		Charset charset;
+
+		this.bagCount = bag.getPayLoadManifests().size();
+		String payloadOxum = bag.getMetadata().get("Payload-Oxum").get(0);
 
 		List<String> payload = Arrays.asList(payloadOxum.split("\\."));
 		if (payload.size() > 0) {
@@ -686,82 +687,57 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 		}
 		int emailNotification = 0;
 		String sender = "";
-		String recipients = "";
+		StringBuilder recipients = new StringBuilder();
 		if (this.config.getEmailNotifications()) {
 			emailNotification = 1;
 			sender = this.config.getUsername();
 			RecipientsRepo recipientsRepo = new RecipientsRepo();
 			List<Recipients> recipientsList = recipientsRepo.getAll();
 			for (Recipients res : recipientsList) {
-				recipients += res.getEmail() + ", ";
+				recipients.append(res.getEmail()).append(", ");
 			}
-			if (!recipients.isEmpty()) {
-				recipients = recipients.substring(0, recipients.length() - 2);
+			if (recipients.length() > 0) {
+				recipients = new StringBuilder(recipients.substring(0, recipients.length() - 2));
 			}
-
 		}
 		if (this.parent.ftpDelivery.isSelected() && this.parent.sftpDelivery.isSelected()) {
-			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, this.ftp.getDestination(), this.sftp.getDestination(), this.bagSize, bag.getPayload().size(), zip, sender, recipients, emailNotification);
+			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, this.ftp.getDestination(), this.sftp.getDestination(), this.bagSize, bag.getPayLoadManifests().size(), zip, sender, recipients.toString(), emailNotification);
 		} else if (this.parent.ftpDelivery.isSelected()) {
-			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, this.ftp.getDestination(), "", this.bagSize, bag.getPayload().size(), zip, sender, recipients, emailNotification);
+			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, this.ftp.getDestination(), "", this.bagSize, bag.getPayLoadManifests().size(), zip, sender, recipients.toString(), emailNotification);
 		} else if (this.parent.sftpDelivery.isSelected()) {
-			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, "", this.sftp.getDestination(), this.bagSize, bag.getPayload().size(), zip, sender, recipients, emailNotification);
+			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, "", this.sftp.getDestination(), this.bagSize, bag.getPayLoadManifests().size(), zip, sender, recipients.toString(), emailNotification);
 		} else {
-			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, "", "", this.bagSize, bag.getPayload().size(), zip, sender, recipients, emailNotification);
+			this.commonUtil.CreateSuccessSemaphore(this.config.getUsername(), this.parent.bagNameField.getText(), this.target, "", "", this.bagSize, bag.getPayLoadManifests().size(), zip, sender, recipients.toString(), emailNotification);
 		}
 
-		String newChecksum = this.commonUtil.checkSum(this.target.toString().concat("/bag-info.txt"));
-		try {
-			this.commonUtil.replaceTextInFile(this.target.toString().concat("/tagmanifest-md5.txt"), originalChecksum, newChecksum);
-		} catch (IOException e) {
-			Logger.getLogger(GACOM).log(Level.INFO, "Issue while updating tagmanifest-md5.txt", e);
-		}
-		this.payLoad = bagInfoTxt.getPayloadOxum();
-		this.bagDate = bagInfoTxt.getBaggingDate();
-		this.bagitSize = bagInfoTxt.getBagSize();
-		String payloadManifest = bag.getPayloadManifest(Manifest.Algorithm.MD5).toString();
+		this.payLoad = payloadOxum;
+		this.bagDate = bag.getMetadata().get("Bagging-Date").get(0);
+		String payloadManifest = bag.getPayLoadManifests().toString();
 		this.manifest = payloadManifest.substring(1, payloadManifest.length() - 1);
 		this.generateSystemDataFile();
-		this.generateCsvFile(bagInfoTxt.getPayloadOxum(), bagInfoTxt.getBaggingDate(), bagInfoTxt.getBagSize());
-		this.createXML(bagInfoTxt.getPayloadOxum(), bagInfoTxt.getBaggingDate(), bagInfoTxt.getBagSize());
-
-		//		this.parent.UpdateProgressBar(this.parent.tranferredFiles);
-		//		this.parent.UpdateProgressBar(this.parent.tranferredFiles);
+		this.generateCsvFile(this.payLoad, this.bagDate, bagitSize);
+		this.createXML(this.payLoad, this.bagDate, bagitSize);
 		try {
-			bag.makeComplete();
-			bag.close();
+                    BagVerifier verifier = new BagVerifier();
+                    BagReader reader = new BagReader();
+                    bag = reader.read(folder);
+                    verifier.isValid(bag, false);
 
-// verify the bag
-//			CompleteVerifierImpl completeVerifier = new CompleteVerifierImpl();
-//			ParallelManifestChecksumVerifier manifestVerifier = new ParallelManifestChecksumVerifier();
-//			ValidVerifierImpl validVerifier = new ValidVerifierImpl(completeVerifier, manifestVerifier);
-//			SimpleResult result = validVerifier.verify(bagFactory.createBag(bag));
-			numberOfFiles = bag.getPayload().size(); // get the number of payload files
-			numberOfFiles += 4; // add the standard bagit files
+                    numberOfFiles = bag.getPayLoadManifests().size(); // get the number of payload files
+                    numberOfFiles += 4; // add the standard bagit files
 
-//			///if (result.isSuccess()) {
-			Logger.getLogger(GACOM).log(Level.INFO, "Bag created. Number of files is {0}", numberOfFiles);
+                    Logger.getLogger(GACOM).log(Level.INFO, "Bag created. Number of files is {0}", numberOfFiles);
 
-			// enable file transfer
-//			this.parent.jProgressBar2.setMaximum(numberOfFiles);
-//			} else {
-//				this.parent.UpdateResult("Bag creation failed. Contact support.");
-//				Logger.getLogger(GACOM).log(Level.SEVERE, "Bag creation failed. Contact support.");
-//			}
-			Path path = Paths.get(this.target + File.separator + "manifest-md5.txt");
-			charset = StandardCharsets.UTF_8;
-			this.content = new String(Files.readAllBytes(path), charset);
-			if (this.parent.serializeBag.isSelected()) {
-				this.parent.UpdateResult("Serializing bag...", 0);
-				Logger.getLogger(GACOM).log(Level.INFO, "Serializing bag...");
-				ZipUtils zipUtil = new ZipUtils();
-				zipUtil.setSourceFolder(this.target.toString());
-				zipUtil.setOutputZipFile(this.target.toString().concat(".zip"));
-				zipUtil.setBagName(this.parent.bagNameField.getText());
-				zipUtil.zip();
-				FileUtils.deleteDirectory(this.target.toFile());
-			}
-		} catch (IOException ex) {
+                    Path path = Paths.get(this.target + File.separator + "manifest-md5.txt");
+                    charset = StandardCharsets.UTF_8;
+                    this.content = new String(Files.readAllBytes(path), charset);
+                    if (this.parent.serializeBag.isSelected()) {
+                        this.parent.UpdateResult("Serializing bag...", 0);
+                        Logger.getLogger(GACOM).log(Level.INFO, "Serializing bag...");
+                        ZipUtil.pack(new File(this.target.toString()), new File(this.target.toString().concat(".zip")));
+                        retryDelete(this.target.toAbsolutePath().toString());
+                    }
+		} catch (IOException | UnparsableVersionException | VerificationException | MaliciousPathException | MissingPayloadManifestException | UnsupportedAlgorithmException | CorruptChecksumException | MissingBagitFileException | InvalidBagitFileFormatException | MissingPayloadDirectoryException | InterruptedException | FileNotInPayloadDirectoryException ex) {
 			Logger.getLogger(GACOM).log(Level.SEVERE, "Error closing the bag", ex);
 			File newManifest = new File(this.target.toString() + File.separator + "manifest-md5.txt");
 			Files.write(newManifest.toPath(), this.content.getBytes(StandardCharsets.UTF_8));
@@ -807,47 +783,49 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 	 * @throws Exception If any errors occur
 	 */
 	public Path TransferFiles() throws Exception {
-		FileTransfer ft = new FileTransfer(parent);
-		int extra = 0;
-//		if (this.parent.serializeBag.isSelected()) {
-//			extra = 10;
-//		}
-//		int totalFiles = this.parent.totalFiles;
-		if (this.totalTries == 1) {
-			System.out.println("this.totalTries == " + this.totalTries);
-			Logger.getLogger(GACOM).log(Level.INFO, "Max Progress bar count: ".concat(Integer.toString(this.parent.totalFiles)));
-			if (this.parent.ftpDelivery.isSelected() && this.parent.serializeBag.isSelected()) {
-				this.totalFiles = this.totalFiles + 2;
-			} else {
-				int newCount = this.parent.totalFiles + 8;
-				this.totalFiles = this.totalFiles + newCount;
-			}
-			if (this.config.getEmailNotifications()) {
-				this.totalFiles = this.totalFiles + 1;
-			}
-			if (this.parent.sftpDelivery.isSelected() && this.parent.serializeBag.isSelected()) {
-				this.totalFiles = this.totalFiles + 2;
-			} else {
-				int newCount = this.parent.totalFiles + 8;
-				this.totalFiles = this.totalFiles + newCount;
-			}
-			this.parent.jProgressBar2.setMaximum(this.totalFiles);
-		}
-		for (String source : this.sources) {
-			File sourceFile = new File(source);
-			File folder = new File(sourceFile.getName());
-			Path folderTarget = this.commonUtil.combine(this.target, folder.toPath());
-			if (!Files.exists(folderTarget)) {
-				Files.createDirectory(folderTarget);
-			}
-			ft.setTargetPath(folderTarget);
-			this.parent.UpdateResult("Transfering files...", 0);
-			Path inputSource = sourceFile.toPath();
-			ft.setSourcePath(inputSource);
-			ft.Perform();
-
-		}
-		return target;
+            FileTransfer ft = new FileTransfer(parent);
+            if (this.totalTries == 1) {
+                System.out.println("this.totalTries == " + this.totalTries);
+                Logger.getLogger(GACOM).log(Level.INFO, "Max Progress bar count: ".concat(Integer.toString(this.parent.totalFiles)));
+                if (this.parent.ftpDelivery.isSelected() && this.parent.serializeBag.isSelected()) {
+                    this.totalFiles = this.totalFiles + 2;
+                } else {
+                    int newCount = this.parent.totalFiles + 8;
+                    this.totalFiles = this.totalFiles + newCount;
+                }
+                if (this.config.getEmailNotifications()) {
+                    this.totalFiles = this.totalFiles + 1;
+                }
+                if (this.parent.sftpDelivery.isSelected() && this.parent.serializeBag.isSelected()) {
+                    this.totalFiles = this.totalFiles + 2;
+                } else {
+                    int newCount = this.parent.totalFiles + 8;
+                    this.totalFiles = this.totalFiles + newCount;
+                }
+                this.parent.jProgressBar2.setMaximum(this.totalFiles);
+            }
+            Path folderTarget = Paths.get(this.target.toString(), "data");
+            if (!Files.exists(folderTarget)) {
+                Files.createDirectories(folderTarget);
+            }
+            int index = 0;
+            for (String source : this.sources) {
+                this.parent.UpdateResult(String.format("(%s/%s)Transfering files...", ++index, this.sources.size()), 0);
+                File sourceFile = new File(source);
+                Path targetPath = CommonUtil.combine(folderTarget, new File(sourceFile.getName()).toPath());
+                if(sourceFile.isDirectory()){
+                    Files.createDirectories(targetPath);
+                }
+                ft.setTargetPath(targetPath);
+                Path inputSource = sourceFile.toPath();
+                ft.setSourcePath(inputSource);
+                ft.Perform();
+                if(sourceFile.isDirectory()){
+                    //restore the original attrs (including last modified date which would have just been modified)
+                    copyFileAttributes(sourceFile.toPath(), targetPath);
+                }
+            }
+            return target;
 	}
 
 	/**
@@ -1059,26 +1037,42 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 
 	}
 
-	/**
+/**
 	 * validate input bag
 	 *
 	 * @param path
 	 * @return
 	 */
 	public int ValidateBag(String path) {
-		BagFactory bagfactory = new BagFactory();
-		File file = new File(path);
-		Bag cbag = bagfactory.createBag(file);
-		CompleteVerifierImpl completeVerifier = new CompleteVerifierImpl();
-		ParallelManifestChecksumVerifier manifestVerifier = new ParallelManifestChecksumVerifier();
-		ValidVerifierImpl validVerifier = new ValidVerifierImpl(completeVerifier, manifestVerifier);
-		SimpleResult result = validVerifier.verify(cbag);
-		if (result.isSuccess()) {
-			return 1;
-		} else {
-			this.parent.UpdateResult(result.getMessages().toString(), 0);
-			return 0;
-		}
+            Path rootDir = Paths.get(path);
+            BagReader reader = new BagReader();
+            Bag bag;
+            String unzippedPath = null;
+            boolean requiresCleanUp = false;
+            try {
+                if(path.toLowerCase().endsWith(".zip")) {
+                        unzippedPath = path.replace(".zip", "");
+                        ZipUtil.unpack(new File(path), new File(unzippedPath));
+                        rootDir = Paths.get(unzippedPath, Paths.get(unzippedPath).getFileName().toString());
+                        requiresCleanUp = true;
+                }
+                bag = reader.read(rootDir);
+                BagVerifier verifier = new BagVerifier();
+                verifier.isValid(bag, false);
+            } catch (IOException | UnparsableVersionException | UnsupportedAlgorithmException
+                            | MaliciousPathException | InvalidBagitFileFormatException | VerificationException
+                            | MissingBagitFileException | MissingPayloadManifestException | CorruptChecksumException
+                            | MissingPayloadDirectoryException | InterruptedException | FileNotInPayloadDirectoryException e) {
+                e.printStackTrace();
+                this.parent.UpdateResult(e.getMessage(), 0);
+                return 0;
+            }
+            finally {
+                if(requiresCleanUp){
+                    retryDelete(unzippedPath);
+                }
+            }
+            return 1;
 	}
 
 	/**
@@ -1088,25 +1082,59 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 	 * @return
 	 */
 	public int BagRecognition(String path) {
-		BagFactory bagfactory = new BagFactory();
-		boolean result = true;
-		File file = new File(path);
-		Bag cbag = bagfactory.createBag(file);//(Bag) file;
-
-		List<String> errorMessages = cbag.verifyComplete().getMessages();
-		int index = errorMessages.size();
-		if (index != 0) {
-			int _index = index - 1;
-			if (errorMessages.get(_index).contains("Bag does not have any payload manifests.") || errorMessages.get(_index).contains("Bag does not have bagit.txt.")) {
-				result = false;
-			}
-		}
-		if (result) {
-			return 1;
-		} else {
-			this.parent.UpdateResult(errorMessages.toString(), 0);
-			return 0;
-		}
+            Path rootDir = Paths.get(path);
+            BagReader reader = new BagReader();
+            String unzippedPath = null;
+            boolean requiresCleanUp = false;
+            int success = 1;
+            try {
+                    if(path.toLowerCase().endsWith(".zip")){
+                            unzippedPath = path.replace(".zip","");
+                            ZipUtil.unpack(new File(path), new File(unzippedPath));
+                            rootDir = Paths.get(unzippedPath, Paths.get(unzippedPath).getFileName().toString());
+                            reader.read(rootDir);
+                            requiresCleanUp = true;
+                    }
+                    reader.read(rootDir);
+            } catch (IOException | InvalidBagitFileFormatException | UnparsableVersionException
+                            | UnsupportedAlgorithmException | MaliciousPathException e) {
+                    e.printStackTrace();
+                    this.parent.UpdateResult(e.getMessage(), 0);
+                    success = 0;
+            }
+            finally {
+                    if(requiresCleanUp){
+                        retryDelete(unzippedPath);
+                    }
+            }
+            return success;
+	}
+        
+            /**
+     * Retry delete in case external program has lock on target file.
+     *
+     * @param path
+     */
+	private void retryDelete(String path){
+            this.parent.UpdateResult("Cleaning up...", 0);
+            int count = 0;
+            int maxTries = 3;
+            while (true) {
+                try {
+                    FileUtils.deleteDirectory(new File(path));
+                    break;
+                } catch (IOException e) {
+                    try {
+                        TimeUnit.SECONDS.sleep(3);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                    if (++count == maxTries) {
+                        this.parent.UpdateResult("Failed to clean up directory. If you are sending directly to dropbox or something similar, you will need to manually delete the unzipped version of this bag:", 0);
+                        this.parent.UpdateResult(path, 0);
+                    }
+                }
+            }
 	}
 
 	/**

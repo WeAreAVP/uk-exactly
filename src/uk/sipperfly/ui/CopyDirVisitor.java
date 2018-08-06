@@ -79,6 +79,14 @@ class CopyDirVisitor extends SimpleFileVisitor<Path> {
 		return FileVisitResult.CONTINUE;
 	}
 
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+            //need to apply directory metadata after walk finishes so it persists
+            Path targetPath = toPath.resolve(fromPath.relativize(dir));
+            CommonUtil.copyFileAttributes(fromPath, targetPath);
+            return super.postVisitDirectory(dir, exc);
+        }
+
 	/**
 	 * Performs the actual file copy from the source to the target. Updates the parent GUI progress bar as well.
 	 *

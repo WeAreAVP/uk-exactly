@@ -39,7 +39,7 @@ public class MyTransferListener implements FTPDataTransferListener {
 
 	public void started() {
 		Logger.getLogger(GACOM).log(Level.INFO, "File transfer started: ".concat(this.filePath));
-		// Transfer startedÏ
+		// Transfer started
 	}
 
 	public void transferred(int length) {

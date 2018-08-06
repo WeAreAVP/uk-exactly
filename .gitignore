@@ -6,5 +6,5 @@ ukexactly
 .DS_Store
 logfile.txt
 logfile.txt*
-nbproject/private
+nbproject/
 /target/
