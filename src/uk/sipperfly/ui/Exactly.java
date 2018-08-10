@@ -2329,9 +2329,11 @@ public class Exactly extends javax.swing.JFrame {
 		Configurations config = configRepo.getOneOrCreateOne();
 		sourceChecksum = "";
                 System.out.println( "before dir scan" );
+                UpdateResult("Started Directory scanning process.", 1);
 		for (String directory : directories) {
 			if (!directory.isEmpty()) {
                                 System.out.println( "Dir scanning" + directory.toString() );
+                                UpdateResult("Scanning Dir : "+ directory.toString(), 1);
 				isSelected = true;
 				File f = new File(directory);
 				if (!f.exists()) {
@@ -2374,12 +2376,13 @@ public class Exactly extends javax.swing.JFrame {
 					}
 					p.waitFor();
 					p.destroy();
+                                        UpdateResult("Dir Scanning Completed : "+ directory.toString(), 0);
 				} catch (Exception e) {
 					System.out.println("error: " + e.toString());
 				}
 			}
 		}
-
+                UpdateResult("Scanning process completed.", 1);
 		if (invalidNames != null && invalidNames.length() > 0) {
 			UpdateResult("Following Folder name(s) contain special characters < > \\ / ? * | \" :", 1);
 			UpdateResult("Please rename before transferring", 0);
