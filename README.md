@@ -9,8 +9,8 @@ Building on work originally begun by the Gates Archive, AVP and the Louie B. Nun
 <li>Windows and MacOS distribution <a href="./dist.md">instructions</a></li>
 <br/>
 <b>Help Guides</b>
-<li><a href="https://www.weareavp.com/wp-content/uploads/2016/03/ExactlyUserGuide.0.1.1.pdf">EXACTLY USER GUIDE - VERSION 0.1.1 (PDF, 865 KB)</a></li>
-<li><a href="https://www.weareavp.com/wp-content/uploads/2016/01/Quickstart-Guide-Delivery.pdf">EXACTLY QUICKSTART GUIDE - DELIVERY (PDF, 956 KB)</a></li>
+<li><a href="https://www.weareavp.com/wp-content/uploads/2018/06/Exactly-User-Guide_v.0.1.5.pdf">EXACTLY USER GUIDE - VERSION 0.1.5 (PDF, 1 MB)</a></li>
+<li><a href="https://www.weareavp.com/wp-content/uploads/2017/08/Quickstart-Guide-Delivery.pdf">EXACTLY QUICKSTART GUIDE - DELIVERY (PDF, 978 KB)</a></li>
 
 <b>Users Group</b>
 <li><a href="https://groups.google.com/d/forum/exactly-users">EXACTLY USERS GOOGLE GROUP</a></li>
@@ -41,6 +41,5 @@ Building on work originally begun by the Gates Archive, AVP and the Louie B. Nun
 <b>Contributors:</b>
 <ul>
 <li>Nouman Tayyab <a href="mailto:nouman@weareavp.com">nouman@weareavp.com</a></li>
-<li>Rimsha Khalid <a href="mailto:rimsha@weareavp.com">rimsha@weareavp.com</a></li>
 </ul>
 
