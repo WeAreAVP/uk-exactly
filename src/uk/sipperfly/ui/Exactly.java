@@ -144,7 +144,7 @@ public class Exactly extends javax.swing.JFrame {
 			}
 		}
                 jScrollPane3.getVerticalScrollBar().setUnitIncrement(16);
-	}
+        }
 
 	/**
 	 * Initialize the logger.
@@ -2329,25 +2329,22 @@ public class Exactly extends javax.swing.JFrame {
 		Configurations config = configRepo.getOneOrCreateOne();
 		sourceChecksum = "";
                 System.out.println( "before dir scan" );
+                UpdateResult("Started Directory scanning process.", 1);
 		for (String directory : directories) {
 			if (!directory.isEmpty()) {
                                 System.out.println( "Dir scanning" + directory.toString() );
+                                UpdateResult("Scanning Dir : "+ directory.toString(), 1);
 				isSelected = true;
 				File f = new File(directory);
 				if (!f.exists()) {
 					UpdateResult("Must choose a valid input folder(s).", 1);
 					return;
 				} else if (f.isFile()) {
-//					size = size + FileUtils.sizeOf(f);
-//					boolean ignore = commonUtil.checkIgnoreFiles(f.getName(), config.getFilters());
-//					if (!ignore) {
                                         
 						this.totalFiles = this.totalFiles + 1;
 						sourceChecksum += f.getName() + "_|_" + commonUtil.checkSum(f.getAbsolutePath()) + "\n";
                                                 System.out.println( "File: " + f.getName() );
-//					}
 				} else {
-//					size = size + FileUtils.sizeOfDirectory(f);
 					this.totalFiles = this.totalFiles + commonUtil.countFilesInDirectory(f, config.getFilters());
                                         System.out.println( "Dir Files count: " + this.totalFiles );
 					sourceChecksum += commonUtil.getDirectoryChecksum(f);
@@ -2379,12 +2376,13 @@ public class Exactly extends javax.swing.JFrame {
 					}
 					p.waitFor();
 					p.destroy();
+                                        UpdateResult("Dir Scanning Completed : "+ directory.toString(), 0);
 				} catch (Exception e) {
 					System.out.println("error: " + e.toString());
 				}
 			}
 		}
-
+                UpdateResult("Scanning process completed.", 1);
 		if (invalidNames != null && invalidNames.length() > 0) {
 			UpdateResult("Following Folder name(s) contain special characters < > \\ / ? * | \" :", 1);
 			UpdateResult("Please rename before transferring", 0);
@@ -2392,12 +2390,6 @@ public class Exactly extends javax.swing.JFrame {
 			return;
 		}
 		this.uploadedFiles = this.totalFiles;
-//		size = commonUtil.convertBytestoGB(size);
-		//Removed the max. size option
-//		if (size > bagSize) {
-//			UpdateResult("Directories size exceed from " + bagSize + " GB.", 1);
-//			return;
-//		}
 
 		if (!isSelected) {
 			UpdateResult("Must choose an input folder.", 1);
@@ -2649,9 +2641,9 @@ public class Exactly extends javax.swing.JFrame {
 private void contactAreaPanel() {                                           
 		this.contactArea.setEditable(false);
 		this.contactArea.setContentType("text/html");
+		
 		this.contactArea.setText("<html>Please post issues and feature requests at <a href='https://github.com/WeAreAVP/uk-exactly/issues'> https://github.com/WeAreAVP/uk-exactly/issues</a>.<br><br> Please send questions, comments or feedback to info@weareavp.com.</html>");
 	}                                          
-
 
 	private void authorAreaPanelContent() {                                          
 		this.authorArea.setEditable(false);
@@ -2670,9 +2662,9 @@ private void contactAreaPanel() {
 				+ "<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. </p>"
 				+ "See the License for the specific language governing permissions and limitations under the License."
 				+ "</html>");
+                
                 this.authorArea.setCaretPosition(0);
 	}       
-
 	private void aboutAreaHyperlinkUpdate(javax.swing.event.HyperlinkEvent evt) {//GEN-FIRST:event_aboutAreaHyperlinkUpdate
 		if (HyperlinkEvent.EventType.ACTIVATED.equals(evt.getEventType())) {
 			Desktop desktop = Desktop.getDesktop();

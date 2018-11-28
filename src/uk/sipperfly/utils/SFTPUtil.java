@@ -3,9 +3,9 @@
  * Author: Nouman Tayyab
  * Version: 0.1.6
  * Requires: JDK 1.7 or higher
- * Description: This tool transfers digital files to the WeAreAVP
+ * Description: This tool transfers digital files to the weareavp
  * Support: info@weareavp.com
- * Copyright 2015 WeAreAVP
+ * Copyright 2015 weareavp
  */
 package uk.sipperfly.utils;
 
