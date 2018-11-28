@@ -144,7 +144,7 @@ public class Exactly extends javax.swing.JFrame {
 			}
 		}
                 jScrollPane3.getVerticalScrollBar().setUnitIncrement(16);
-	}
+        }
 
 	/**
 	 * Initialize the logger.
@@ -2329,25 +2329,22 @@ public class Exactly extends javax.swing.JFrame {
 		Configurations config = configRepo.getOneOrCreateOne();
 		sourceChecksum = "";
                 System.out.println( "before dir scan" );
+                UpdateResult("Started Directory scanning process.", 1);
 		for (String directory : directories) {
 			if (!directory.isEmpty()) {
                                 System.out.println( "Dir scanning" + directory.toString() );
+                                UpdateResult("Scanning Dir : "+ directory.toString(), 1);
 				isSelected = true;
 				File f = new File(directory);
 				if (!f.exists()) {
 					UpdateResult("Must choose a valid input folder(s).", 1);
 					return;
 				} else if (f.isFile()) {
-//					size = size + FileUtils.sizeOf(f);
-//					boolean ignore = commonUtil.checkIgnoreFiles(f.getName(), config.getFilters());
-//					if (!ignore) {
                                         
 						this.totalFiles = this.totalFiles + 1;
 						sourceChecksum += f.getName() + "_|_" + commonUtil.checkSum(f.getAbsolutePath()) + "\n";
                                                 System.out.println( "File: " + f.getName() );
-//					}
 				} else {
-//					size = size + FileUtils.sizeOfDirectory(f);
 					this.totalFiles = this.totalFiles + commonUtil.countFilesInDirectory(f, config.getFilters());
                                         System.out.println( "Dir Files count: " + this.totalFiles );
 					sourceChecksum += commonUtil.getDirectoryChecksum(f);
@@ -2379,12 +2376,13 @@ public class Exactly extends javax.swing.JFrame {
 					}
 					p.waitFor();
 					p.destroy();
+                                        UpdateResult("Dir Scanning Completed : "+ directory.toString(), 0);
 				} catch (Exception e) {
 					System.out.println("error: " + e.toString());
 				}
 			}
 		}
-
+                UpdateResult("Scanning process completed.", 1);
 		if (invalidNames != null && invalidNames.length() > 0) {
 			UpdateResult("Following Folder name(s) contain special characters < > \\ / ? * | \" :", 1);
 			UpdateResult("Please rename before transferring", 0);
@@ -2392,12 +2390,6 @@ public class Exactly extends javax.swing.JFrame {
 			return;
 		}
 		this.uploadedFiles = this.totalFiles;
-//		size = commonUtil.convertBytestoGB(size);
-		//Removed the max. size option
-//		if (size > bagSize) {
-//			UpdateResult("Directories size exceed from " + bagSize + " GB.", 1);
-//			return;
-//		}
 
 		if (!isSelected) {
 			UpdateResult("Must choose an input folder.", 1);
@@ -2624,7 +2616,7 @@ public class Exactly extends javax.swing.JFrame {
 		this.aboutArea.setText("<html>Exactly 0.1.6<br>"
 				+ "<p>Exactly was developed by the Louie B. Nunn Center at the University of Kentucky Libraries and AVP and can be found at <a href='https://www.weareavp.com/products/exactly'>www.weareavp.com/products/exactly</a>.</p><br>"
 				+ "The GitHub repository for Exactly can be found at <a href='https://github.com/WeAreAVP/uk-exactly'>https://github.com/WeAreAVP/uk-exactly</a>.<br><br>"
-				+ "<p>Exactly is a simple and easy to use application for remotely and safely transferring any born-digital material to the archive. Exactly is a user-friendly application that utilizes the BagIt File Packaging Format, supports FTP transfer, as well as standard network transfers, and integrates into desktop-based file sharing workflows such as Dropbox or Google Drive. Additionally, Exactly allows the archive to create preset configurations, as well as customized metadata templates for the donor to fill out before submission. With structured metadata coming into the archive with the digital object, the accessioning process can be much more efficiently. Exactly can send email notifications when files have been delivered to the archive. Exactly is addressing one of the Nunn Centerâ€™s greatest workflow challenges, but also one of the greatest challenges facing any archive working with born-digital material.</p>"
+				+ "<p>Exactly is a simple and easy to use application for remotely and safely transferring any born-digital material to the archive. Exactly is a user-friendly application that utilizes the BagIt File Packaging Format, supports FTP transfer, as well as standard network transfers, and integrates into desktop-based file sharing workflows such as Dropbox or Google Drive. Additionally, Exactly allows the archive to create preset configurations, as well as customized metadata templates for the donor to fill out before submission. With structured metadata coming into the archive with the digital object, the accessioning process can be much more efficiently. Exactly can send email notifications when files have been delivered to the archive. Exactly is addressing one of the Nunn Center's greatest workflow challenges, but also one of the greatest challenges facing any archive working with born-digital material.</p>"
 				+ "</html>");
 	}                
 	private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
@@ -2649,9 +2641,9 @@ public class Exactly extends javax.swing.JFrame {
 private void contactAreaPanel() {                                           
 		this.contactArea.setEditable(false);
 		this.contactArea.setContentType("text/html");
+		
 		this.contactArea.setText("<html>Please post issues and feature requests at <a href='https://github.com/WeAreAVP/uk-exactly/issues'> https://github.com/WeAreAVP/uk-exactly/issues</a>.<br><br> Please send questions, comments or feedback to info@weareavp.com.</html>");
 	}                                          
-
 
 	private void authorAreaPanelContent() {                                          
 		this.authorArea.setEditable(false);
@@ -2670,9 +2662,9 @@ private void contactAreaPanel() {
 				+ "<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. </p>"
 				+ "See the License for the specific language governing permissions and limitations under the License."
 				+ "</html>");
+                
                 this.authorArea.setCaretPosition(0);
 	}       
-
 	private void aboutAreaHyperlinkUpdate(javax.swing.event.HyperlinkEvent evt) {//GEN-FIRST:event_aboutAreaHyperlinkUpdate
 		if (HyperlinkEvent.EventType.ACTIVATED.equals(evt.getEventType())) {
 			Desktop desktop = Desktop.getDesktop();

@@ -2,7 +2,7 @@
  * Exactly
  * Author: Nouman Tayyab (nouman@weareavp.com)
  * Author: Rimsha Khalid (rimsha@weareavp.com)
- * Version: 0.1.6
+ * Version: 0.1.5
  * Requires: JDK 1.7 or higher
  * Description: This tool transfers digital files to the UK Exactly
  * Support: info@weareavp.com
@@ -557,10 +557,8 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 	protected Path setTragetPath() throws Exception {
             // get the drop location path from database.
             Path targetDirPath = new File(this.config.getDropLocation()).toPath();
-            System.out.println( "targetDirPath: " + targetDirPath.toString() );
-            // create it if it doesn't exist
-            targetDirPath = Paths.get(targetDirPath.toString(), this.target.getFileName().toString());
-            System.out.print( "Needs to create: " + targetDirPath );
+            
+            
             if (!Files.exists(targetDirPath)) {
                 try{
                     Files.createDirectory(targetDirPath);
@@ -735,8 +733,9 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
 		this.generateSystemDataFile();
 		this.generateCsvFile(this.payLoad, this.bagDate, bagitSize);
 		this.createXML(this.payLoad, this.bagDate, bagitSize);
+                BagVerifier verifier = new BagVerifier();
 		try {
-                    BagVerifier verifier = new BagVerifier();
+                    
                     BagReader reader = new BagReader();
                     bag = reader.read(folder);
                     verifier.isValid(bag, false);
@@ -752,14 +751,16 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
                     if (this.parent.serializeBag.isSelected()) {
                         this.parent.UpdateResult("Serializing bag...", 0);
                         Logger.getLogger(GACOM).log(Level.INFO, "Serializing bag...");
-                        ZipUtil.pack(new File(this.target.getParent().toString()), new File(this.target.getParent().toString().concat(".zip")));
-                        retryDelete(this.target.getParent().toAbsolutePath().toString());
+                        ZipUtil.pack(new File(this.target.toString()), new File(this.target.toString().concat(".zip")));
+                        retryDelete(this.target.toAbsolutePath().toString());
                     }
 		} catch (IOException | UnparsableVersionException | VerificationException | MaliciousPathException | MissingPayloadManifestException | UnsupportedAlgorithmException | CorruptChecksumException | MissingBagitFileException | InvalidBagitFileFormatException | MissingPayloadDirectoryException | InterruptedException | FileNotInPayloadDirectoryException ex) {
 			Logger.getLogger(GACOM).log(Level.SEVERE, "Error closing the bag", ex);
 			File newManifest = new File(this.target.toString() + File.separator + "manifest-md5.txt");
 			Files.write(newManifest.toPath(), this.content.getBytes(StandardCharsets.UTF_8));
-		}
+		} finally {
+                    verifier.close();
+                }
 		if (this.parent.totalFiles > this.parent.tranferredFiles) {
 			this.parent.UpdateProgressBar(this.parent.totalFiles);
 		}
@@ -1067,6 +1068,7 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
             Bag bag;
             String unzippedPath = null;
             boolean requiresCleanUp = false;
+            BagVerifier verifier = new BagVerifier();
             try {
                 if(path.toLowerCase().endsWith(".zip")) {
                         unzippedPath = path.replace(".zip", "");
@@ -1075,7 +1077,7 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
                         requiresCleanUp = true;
                 }
                 bag = reader.read(rootDir);
-                BagVerifier verifier = new BagVerifier();
+               
                 verifier.isValid(bag, false);
             } catch (IOException | UnparsableVersionException | UnsupportedAlgorithmException
                             | MaliciousPathException | InvalidBagitFileFormatException | VerificationException
@@ -1086,8 +1088,10 @@ class BackgroundWorker extends SwingWorker<Integer, Void> {
                 return 0;
             }
             finally {
+                verifier.close();
                 if(requiresCleanUp){
                     retryDelete(unzippedPath);
+                    
                 }
             }
             return 1;

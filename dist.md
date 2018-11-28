@@ -17,4 +17,3 @@ Windows
 - From `Projects` view right click and select build
 - Once the package is complete open launch4j windows application and select 'exactly.jar' from `uk-exactly/target` to convert to exe.
 - launch4j configurations file is included [launch4j-exactly-build.xml](https://github.com/WeAreAVP/uk-exactly/) Update the version number if required.
-
