@@ -24,7 +24,7 @@ Building on work originally begun by the Gates Archive, AVP and the Louie B. Nun
 <li>apache-commons-codec-1.3</li>
 <li>applejavaextensions-1.4</li>
 <li>bagit-4.4</li>
-<li>commons-compress-1.3</li>
+<li>commons-compress-1.18</li>
 <li>commons-io-2.0.1</li>
 <li>commons-logging-api-1.1.1</li>
 <li>commons-net-3.0.1</li>
