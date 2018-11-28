@@ -42,4 +42,3 @@ Building on work originally begun by the Gates Archive, AVP and the Louie B. Nun
 <ul>
 <li>Nouman Tayyab <a href="mailto:nouman@weareavp.com">nouman@weareavp.com</a></li>
 </ul>
-

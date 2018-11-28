@@ -172,7 +172,7 @@
                             <finalName>exactly</finalName>
                             <transformers>
                                 <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>uk.sipperfly.ui.Exactly</mainClass>
                                 </transformer>
                             </transformers>
@@ -190,7 +190,6 @@
             <properties>
                 <jarGoalPhase>none</jarGoalPhase>
             </properties>
-
             <!-- Localization dependency -->
             <dependencies>
                 <dependency>
@@ -199,7 +198,6 @@
                     <version>${gephi.platform.localization.version}</version>
                 </dependency>
             </dependencies>
-
             <build>
                 <plugins>
                     <!-- Enable artifact deploy -->
@@ -210,7 +208,6 @@
                             <skipNexusStagingDeployMojo>false</skipNexusStagingDeployMojo>
                         </configuration>
                     </plugin>
-
                     <!-- Permits NbModuleSuite to be run in integration-test phase: -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -222,7 +219,6 @@
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
-
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
@@ -251,7 +247,6 @@
                                         <exec dir="src/main/app-resources" executable="ReplaceVistaIcon.exe" resolveexecutable="true" osfamily="windows">
                                             <arg line="${project.build.directory}/${brandingToken}/bin/${brandingToken}64.exe gephifile.ico 1"/>
                                         </exec>
-
                                         <!-- Linux (assuming the right wine configuration) -->
                                         <echo message="Replacing icon of Windows launcher executable."/>
                                         <exec dir="src/main/app-resources" executable="replacevistaicon" os="Linux">
@@ -282,12 +277,10 @@
                                     <target name="createInstaller" description="Create Windows installer with InnoSetup">
                                         <echo message="Creating windows installer with InnoSetup"/>
                                         <delete file="${project.artifactId}-${project.version}.setup.exe" failonerror="false"/>
-
                                         <!-- Windows -->
                                         <exec dir="${project.build.directory}" executable="${gephi.innosetup.path}/Compil32.exe" osfamily="windows">
                                             <arg line="/cc &quot;${brandingToken}.iss&quot;" />
                                         </exec>
-
                                         <!-- Linux (assuming the right wine configuration) -->
                                         <exec dir="${project.build.directory}" executable="iscc" os="Linux">
                                             <arg line="${brandingToken}.iss" />
@@ -313,25 +306,20 @@
                                             <fileset dir="${project.build.directory}/${project.artifactId}-${project.version}.dmg" followsymlinks="false"/>
                                         </delete>
                                         <delete file="${project.build.directory}/${project.artifactId}-${project.version}.dmg" failonerror="false"/>
-
                                         <!-- Create folders -->
                                         <mkdir dir="${project.build.directory}/${gephi.appbundle.name}.app"/>
                                         <mkdir dir="${project.build.directory}/${gephi.appbundle.name}.app/Contents/MacOS"/>
-
                                         <!-- Copy application -->
                                         <copy todir="${project.build.directory}/${gephi.appbundle.name}.app/Contents/Resources/${brandingToken}">
                                             <fileset dir="${project.build.directory}/${brandingToken}"/>
                                         </copy>
-
                                         <!-- Copy logo and configuration files -->
                                         <copy tofile="${project.build.directory}/${gephi.appbundle.name}.app/Contents/Resources/${brandingToken}.icns" file="src/main/app-resources/${brandingToken}.icns" />
                                         <copy tofile="${project.build.directory}/${gephi.appbundle.name}.app/Contents/Info.plist" file="${project.build.directory}/Info.plist"/>
-
                                         <!-- Move bin/gephi script into MacOS/gephi and modify the script so it founds its resources -->
                                         <move file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/Resources/${brandingToken}/bin/${brandingToken}" todir="${project.build.directory}/${gephi.appbundle.name}.app/Contents/MacOS"/>
                                         <replace file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/MacOS/${brandingToken}" token="`dirname &quot;$PRG&quot;`" value="`dirname &quot;$PRG&quot;`&quot;/../Resources/${brandingToken}/bin&quot;"/>
                                         <chmod file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/MacOS/${brandingToken}" perm="ugo+rx"/>
-
                                         <!-- Download and untar JRE -->
                                         <exec dir="${project.build.directory}" executable="curl">
                                             <arg line="-L"/>
@@ -342,7 +330,6 @@
                                             <arg line="-O"/>
                                             <arg line="${gephi.bundle.jre.url}/${gephi.bundle.jre.version}.tar.gz"/>
                                         </exec>
-
                                         <!-- Unzip archive -->
                                         <mkdir dir="${project.build.directory}/${gephi.appbundle.name}.app/Contents/PlugIns"/>
                                         <exec dir="${project.build.directory}" executable="tar">
@@ -350,29 +337,24 @@
                                             <arg line="${gephi.bundle.jre.version}.tar.gz"/>
                                             <arg line="-C &quot;${gephi.appbundle.name}.app/Contents/PlugIns&quot;"/>
                                         </exec>
-
                                         <!-- Remove quarantine bit set recursively on JRE -->
                                         <exec dir="${project.build.directory}" os="Mac OS X" executable="xattr">
                                             <arg line="-rd"/>
                                             <arg line="com.apple.quarantine"/>
                                             <arg line="&quot;${gephi.appbundle.name}.app/Contents/PlugIns&quot;"/>
                                         </exec>
-
                                         <!-- Get the JRE folder name -->
                                         <path id="jre_name">
                                             <dirset dir="${project.build.directory}/${gephi.appbundle.name}.app/Contents/PlugIns" includes="jre*" />
                                         </path>
                                         <property name="bundle.jre.path" refid="jre_name" />
                                         <basename property="bundle.jre.name" file="${bundle.jre.path}"/>
-
                                         <!-- Configure relative JRE path into gephi.conf -->
                                         <replace file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/Resources/${brandingToken}/etc/${brandingToken}.conf" token="#jdkhome=&quot;/path/to/jdk&quot;" value="jdkhome=&quot;../../PlugIns/${bundle.jre.name}/Contents/Home&quot;"/>
                                         <chmod file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/PlugIns/**" perm="+x" type="both"/>
-
                                         <!-- Fix JRE by replacing libjli.dylib symlink with real file -->
                                         <delete file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/PlugIns/${bundle.jre.name}/Contents/MacOS/libjli.dylib"/>
                                         <copy file="${project.build.directory}/${gephi.appbundle.name}.app/Contents/PlugIns/${bundle.jre.name}/Contents/Home/lib/jli/libjli.dylib" todir="${project.build.directory}/${gephi.appbundle.name}.app/Contents/PlugIns/${bundle.jre.name}/Contents/MacOS"/>
-
                                         <!-- Codesign JRE -->
                                         <exec dir="${project.build.directory}" os="Mac OS X" executable="codesign">
                                             <arg value="-fs"/>
@@ -380,7 +362,6 @@
                                             <arg value="-v"/>
                                             <arg value="${gephi.appbundle.name}.app/Contents/PlugIns/${bundle.jre.name}/"/>
                                         </exec>
-
                                         <!-- Codesign app -->
                                         <exec dir="${project.build.directory}" os="Mac OS X" executable="codesign">
                                             <arg value="-fs"/>
@@ -388,12 +369,10 @@
                                             <arg value="-v"/>
                                             <arg value="${gephi.appbundle.name}.app"/>
                                         </exec>
-
                                         <!-- Create application folder and add Applications dynamic link -->
                                         <mkdir dir="${project.build.directory}/${gephi.app.title}"/>
                                         <move file="${project.build.directory}/${gephi.appbundle.name}.app" todir="${project.build.directory}/${gephi.app.title}/" />
                                         <symlink link="${project.build.directory}/${gephi.app.title}/Applications" resource="/Applications" failonerror="false" />
-
                                         <!-- Create DMG (Mac OS X) -->
                                         <exec dir="${project.build.directory}" os="Mac OS X" executable="hdiutil">
                                             <arg value="create"/>
@@ -404,7 +383,6 @@
                                             <arg value="${project.build.directory}/${gephi.app.title}"/>
                                             <arg value="${project.artifactId}-${project.version}.dmg"/>
                                         </exec>
-
                                         <!-- Create DMG (Linux), only for testing -->
                                         <exec dir="${project.build.directory}" os="Linux" executable="genisoimage">
                                             <arg value="-V"/>
@@ -451,7 +429,6 @@
                             </execution>
                         </executions>
                     </plugin>
-
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>build-helper-maven-plugin</artifactId>

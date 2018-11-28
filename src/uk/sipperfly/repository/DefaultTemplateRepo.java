@@ -2,7 +2,7 @@
  * Exactly
  * Author: Nouman Tayyab (nouman@weareavp.com)
  * Author: Rimsha Khalid (rimsha@weareavp.com)
- * Version: 0.1.6
+ * Version: 0.1.5
  * Requires: JDK 1.7 or higher
  * Description: This tool transfers digital files to the UK Exactly
  * Support: info@weareavp.com
